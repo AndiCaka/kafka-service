@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring.cloud.stream.bindings:
+  geonetwork-in-0:
+    destination: assessment
+    group: fair
+
+spring.cloud.stream.bindings.geonetwork-in-0.consumer:
+  maxAttempts: 3
+  backOffInitialInterval: 500
+  backOffMaxInterval: 1000
+  backOffMultiplier: 2.0
+
+spring.cloud.stream.kafka.bindings.geonetwork-in-0.consumer:
+  enableDlq: true
+
+#spring.cloud.stream.defaultBinder: kafka
+spring.kafka.bootstrap-servers: kafka:9092
+
+spring.cloud.stream:
+  bindings:
+    geonetwork-out-0:
+      destination: assessment
+      producer:
+        required-groups: fair
+
+spring.cloud.stream.bindings.geonetwork-out-0.producer:
+  partition-key-expression: headers['partitionKey']
+  partition-count: 2
+
+schedulers:
+  geonet:
+    threadPoolSize: 10
+    taskQueueSize: 100
+
+#spring.cloud.stream.kafka.binder.brokers: kafka
