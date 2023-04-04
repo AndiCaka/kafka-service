@@ -3,6 +3,7 @@ package com.kafka.core.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
@@ -18,4 +19,17 @@ public class SchedulersConfig {
     public Scheduler geonetEventScheduler() {
         return Schedulers.newBoundedElastic(threadPoolSize, taskQueueSize, "publish-pool");
     }
+
+    @Bean
+    public WebClient fujiEventScheduler() {
+        WebClient webClient = WebClient.create("https://www.f-uji.net");
+        return webClient;
+    }
+
+    @Bean
+    public WebClient geonetworkEventScheduler() {
+        WebClient webClient = WebClient.create("http://localhost:8080");
+        return webClient;
+    }
+
 }

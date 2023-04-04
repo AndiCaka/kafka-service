@@ -1,6 +1,8 @@
 server:
   port: 8080
 
+spring.cloud.function.definition: geonetwork
+
 spring.cloud.stream.bindings:
   geonetwork-in-0:
     destination: assessment

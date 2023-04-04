@@ -20,18 +20,28 @@ public class MessageProcessorConfig {
 
     @Bean
     public Consumer<Event<Integer, GeoNetModel>> geonetwork() {
-        return event -> {
-            switch (event.getEventType()) {
-                case CREATE:
-                    GeoNetModel geoNetModel = event.getData();
-//                    productService.createProduct(product).block();
-                    break;
-                default:
-                    String errorMessage = "Incorrect event type: " +
-                            event.getEventType() +
-                            ", expected a CREATE or DELETE event";
-                    throw new EventProcessingException(errorMessage);
-            }
-        };
+
+
+
+        return null;
+
+//        return event -> {
+//            switch (event.getEventType()) {
+//                case CREATE:
+//                    GeoNetModel geoNetModel = event.getData();
+//                    geoNetService.createProduct(geoNetModel).block();
+//                    break;
+//
+//                case DELETE:
+//                    int productId = event.getKey();
+////                    productService.deleteProduct(productId).block();
+//                    break;
+//                default:
+//                    String errorMessage = "Incorrect event type: " +
+//                            event.getEventType() +
+//                            ", expected a CREATE or DELETE event";
+//                    throw new EventProcessingException(errorMessage);
+//            }
+//        };
     }
 }

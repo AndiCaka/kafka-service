@@ -5,5 +5,7 @@ import reactor.core.publisher.Mono;
 
 public interface IGeoNetService {
 
-    Mono<Void>  test(GeoNetModel geoNetModel);
+    Mono<Void> test(GeoNetModel geoNetModel);
+
+    Mono<GeoNetModel> createProduct(GeoNetModel geoNetModel);
 }

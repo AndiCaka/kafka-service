@@ -16,9 +16,8 @@ public class GeoNetworkController {
     @Autowired
     private IGeoNetService iGeoNetService;
 
-
     @PostMapping("/send")
-    public ResponseEntity<?>testEndpoint(@RequestBody GeoNetModel geoNetModel){
+    public ResponseEntity<?> testEndpoint(@RequestBody GeoNetModel geoNetModel){
         return ResponseEntity.ok(iGeoNetService.test(geoNetModel));
     }
 }

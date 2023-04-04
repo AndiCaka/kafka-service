@@ -12,7 +12,6 @@ public class Schedule {
     @Async
     @Scheduled(fixedRate = 3000) //1:01:am
     public void geonet() throws InterruptedException {
-        System.err.println(
-                "Fixed rate task async - " + System.currentTimeMillis() / 1000);
+
     }
 }
