@@ -47,10 +47,10 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
     public Flux<Object> setFairAssesment(){
 
-//        Flux<Object> flux = listOfMetadataDoi();
-//        schedulersConfig.fujiEventScheduler().put().uri("/doi/setFairassesment?metadataDoiId=&fairAssesment=",
-//                flux.toStream().forEach(ob -> ob.)
-//        );
+        Flux<Object> flux = listOfMetadataDoi();
+        schedulersConfig.fujiEventScheduler().put().uri("/doi/setFairassesment?metadataDoiId=&fairAssesment=",
+                flux.toStream().forEach(ob -> ob.)
+        );
 
         return null;
     }
