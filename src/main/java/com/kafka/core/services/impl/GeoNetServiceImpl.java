@@ -2,6 +2,7 @@ package com.kafka.core.services.impl;
 
 import com.kafka.core.config.Event;
 import com.kafka.core.config.SchedulersConfig;
+import com.kafka.core.config.WebClientConfig;
 import com.kafka.core.models.GeoNetModel;
 import com.kafka.core.services.IGeoNetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +27,7 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
     private StreamBridge streamBridge;
 
-    private SchedulersConfig schedulersConfig;
+    private WebClientConfig webClientConfig;
     private Scheduler geonetEventScheduler;
     @Autowired
     public GeoNetServiceImpl(
@@ -36,11 +37,11 @@ public class GeoNetServiceImpl implements IGeoNetService {
     ) {
         this.geonetEventScheduler = geonetEventScheduler;
         this.streamBridge = streamBridge;
-        this.schedulersConfig = schedulersConfig;
+        this.webClientConfig = webClientConfig;
     }
 
     public Flux<Object> listOfMetadataDoi(){
-        return schedulersConfig.geonetworkEventScheduler().get().uri("/metadatadoi/fairassesment").retrieve()
+        return webClientConfig.geonetworkEventScheduler().get().uri("/metadatadoi/fairassesment").retrieve()
                 .bodyToFlux(Object.class);
     }
 
@@ -48,7 +49,7 @@ public class GeoNetServiceImpl implements IGeoNetService {
     public Flux<Object> setFairAssesment(){
 
         Flux<Object> flux = listOfMetadataDoi();
-        schedulersConfig.fujiEventScheduler().put().uri("/doi/setFairassesment?metadataDoiId=&fairAssesment=",
+        webClientConfig.fujiEventScheduler().put().uri("/doi/setFairassesment?metadataDoiId=&fairAssesment=",
                 flux.toStream().forEach(ob -> ob.)
         );
 

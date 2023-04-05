@@ -17,19 +17,7 @@ public class SchedulersConfig {
 
     @Bean
     public Scheduler geonetEventScheduler() {
-        return Schedulers.newBoundedElastic(threadPoolSize, taskQueueSize, "fiar-assessments-pool");
-    }
-
-    @Bean
-    public WebClient fujiEventScheduler() {
-        WebClient webClient = WebClient.create("https://localhost:8888");
-        return webClient;
-    }
-
-    @Bean
-    public WebClient geonetworkEventScheduler() {
-        WebClient webClient = WebClient.create("http://localhost:8080");
-        return webClient;
+        return Schedulers.newBoundedElastic(threadPoolSize, taskQueueSize, "fair-assessments-pool");
     }
 
 }

@@ -21,11 +21,15 @@ public class MessageProcessorConfig {
     @Bean
     public Consumer<Event<Integer, GeoNetModel>> geonetwork() {
 
-
-
         return null;
 
 //        return event -> {
+
+//        call put method here;
+
+
+
+
 //            switch (event.getEventType()) {
 //                case CREATE:
 //                    GeoNetModel geoNetModel = event.getData();
