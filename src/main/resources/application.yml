@@ -42,7 +42,7 @@ spring:
         provider:
           keycloak:
             authorization-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/authorize
-            token-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/token
+            token-uri: https://keycloak.lfwbln.dev.linfa.services/auth/realms/geonetwork/protocol/openid-connect/token
             
 # FUJI AUTH CREDENTIALS
 
