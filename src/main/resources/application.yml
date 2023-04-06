@@ -1,12 +1,16 @@
 server:
   port: 8080
 
-spring.cloud.function.definition: geonetwork
+spring.kafka.bootstrap-servers: kafka:9092
 
 spring.cloud.stream.bindings:
-  geonetwork-in-0:
-    destination: assessment
-    group: fair
+   process-in-0:
+      destination: assessment
+      group: fair
+   process-out-0:
+      destination: assessment
+      producer:
+        required-groups: auditGroup
 
 spring.cloud.stream.bindings.geonetwork-in-0.consumer:
   maxAttempts: 3
@@ -15,25 +19,41 @@ spring.cloud.stream.bindings.geonetwork-in-0.consumer:
   backOffMultiplier: 2.0
 
 spring.cloud.stream.kafka.bindings.geonetwork-in-0.consumer:
-  enableDlq: true
-
-#spring.cloud.stream.defaultBinder: kafka
-spring.kafka.bootstrap-servers: kafka:9092
-
-spring.cloud.stream:
-  bindings:
-    geonetwork-out-0:
-      destination: assessment
-      producer:
-        required-groups: fair
-
-spring.cloud.stream.bindings.geonetwork-out-0.producer:
-  partition-key-expression: headers['partitionKey']
-  partition-count: 2
+   enableDlq: true
 
 schedulers:
   geonet:
     threadPoolSize: 10
     taskQueueSize: 100
 
-#spring.cloud.stream.kafka.binder.brokers: kafka
+# AUTHORIZATION0-SERVER CONFIGURATION (GEONETWORK)
+
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: geonetwork
+            client-secret: password
+            authorization-grant-type: client_credentials
+            #redirect-uri: "{baseUrl}/authorized/okta"
+            scope: read, write
+        provider:
+          keycloak:
+            authorization-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/authorize
+            token-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/token
+            
+# FUJI AUTH CREDENTIALS
+
+fuji.auth:
+   username: marvel
+   password: wonderwoman
+
+
+# SERVICE URLS
+
+service:
+   fuji: http://localhost:1071/fuji/api/v1/evaluate
+   geonetwork: http://localhost:8080
+

@@ -1,79 +1,93 @@
 package com.kafka.core.services.impl;
 
-import com.kafka.core.config.Event;
-import com.kafka.core.config.SchedulersConfig;
-import com.kafka.core.config.WebClientConfig;
-import com.kafka.core.models.GeoNetModel;
-import com.kafka.core.services.IGeoNetService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.List;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kafka.core.config.Event;
+import com.kafka.core.dto.FujiDTO;
+import com.kafka.core.dto.GeoNetDTO;
+import com.kafka.core.services.IGeoNetService;
 
-import static com.kafka.core.config.Event.Type.CREATE;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.netty.http.client.HttpClientRequest;
 
 @Service
 public class GeoNetServiceImpl implements IGeoNetService {
 
-    private StreamBridge streamBridge;
+	private final StreamBridge streamBridge;
+	private final Scheduler geonetEventScheduler;
+	private final WebClient fujiClient;
+	private final WebClient geonetworkClient;
 
-    private WebClientConfig webClientConfig;
-    private Scheduler geonetEventScheduler;
-    @Autowired
-    public GeoNetServiceImpl(
-            Scheduler geonetEventScheduler,
-            StreamBridge streamBridge,
-            SchedulersConfig schedulersConfig
-    ) {
-        this.geonetEventScheduler = geonetEventScheduler;
-        this.streamBridge = streamBridge;
-        this.webClientConfig = webClientConfig;
-    }
+	@Autowired
+	public GeoNetServiceImpl(StreamBridge streamBridge, Scheduler geonetEventScheduler, WebClient fujiClient,
+			WebClient geonetworkClient) {
+		super();
+		this.streamBridge = streamBridge;
+		this.geonetEventScheduler = geonetEventScheduler;
+		this.fujiClient = fujiClient;
+		this.geonetworkClient = geonetworkClient;
+	}
 
-    public Flux<Object> listOfMetadataDoi(){
-        return webClientConfig.geonetworkEventScheduler().get().uri("/metadatadoi/fairassesment").retrieve()
-                .bodyToFlux(Object.class);
-    }
+	@Override
+	public void process() {
+		getDoiList().forEach(doi -> subscribe(doi));
+	}
 
+	private Mono<GeoNetDTO> subscribe(GeoNetDTO geoNetDTO) {
 
-    public Flux<Object> setFairAssesment(){
+		return Mono.fromCallable(() -> {
+			sendMessage("process-out-0", new Event(geoNetDTO, doiURL -> assessDOI(doiURL),
+					(doiId, assessment) -> updateDOI(doiId, assessment)));
+			return geoNetDTO;
+		}).subscribeOn(geonetEventScheduler);
+	}
 
-        Flux<Object> flux = listOfMetadataDoi();
-        webClientConfig.fujiEventScheduler().put().uri("/doi/setFairassesment?metadataDoiId=&fairAssesment=",
-                flux.toStream().forEach(ob -> ob.)
-        );
+	public String assessDOI(String doi) {
+		try {
+			String fujiDTO = new ObjectMapper().writeValueAsString(new FujiDTO("", "", doi, true, true));
+			return fujiClient.post().body(Mono.just(fujiDTO), String.class).retrieve().bodyToMono(String.class).block();
+		} catch (JsonProcessingException e) {
+			return null;
+		}
+	}
 
-        return null;
-    }
+	private void updateDOI(int id, String assessment) {
+		// TODO: call geonet update endpoint
+		geonetworkClient.put();
+	}
 
-    @Override
-    public Mono<Void> test(GeoNetModel geoNetModel) {
-        return Mono.fromRunnable(() -> sendMessage("geonetwork-out-0", new Event(CREATE, geoNetModel.getId(), geoNetModel)))
-                .subscribeOn(geonetEventScheduler).then();
-    }
+	private void sendMessage(String bindingName, Event event) {
+		Message message = MessageBuilder.withPayload(event).build();
+		streamBridge.send(bindingName, message);
+	}
 
-    @Override
-    public Mono<GeoNetModel> createProduct(GeoNetModel geoNetModel) {
-        return Mono.fromCallable(() -> {
-            sendMessage("geonetwork-out-0",
-                    new Event(CREATE, geoNetModel.getId(), geoNetModel));
-            return geoNetModel;
-        }).subscribeOn(geonetEventScheduler);
-    }
+	private List<GeoNetDTO> getDoiList() {
 
-    private void sendMessage(String bindingName, Event event) {
-        Message message = MessageBuilder.withPayload(event)
-                .build();
-        streamBridge.send(bindingName, message);
-    }
+		Mono<List<GeoNetDTO>> response = geonetworkClient.get().uri("/metadatadoi/fairassesment")
+				.accept(MediaType.APPLICATION_JSON).retrieve()
+				.bodyToMono(new ParameterizedTypeReference<List<GeoNetDTO>>() {
+				});
+
+		List<GeoNetDTO> dois = response.block();
+		return dois.stream().collect(Collectors.toList());
+	}
 }
