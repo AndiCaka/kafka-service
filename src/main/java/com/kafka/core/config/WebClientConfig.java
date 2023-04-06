@@ -65,7 +65,7 @@ public class WebClientConfig {
 	WebClient geonetworkClient(ReactiveClientRegistrationRepository clientRegistrations) {
 		ServerOAuth2AuthorizedClientExchangeFilterFunction oauth = new ServerOAuth2AuthorizedClientExchangeFilterFunction(
 				clientRegistrations, new UnAuthenticatedServerOAuth2AuthorizedClientRepository());
-		oauth.setDefaultClientRegistrationId("bael");
+		oauth.setDefaultClientRegistrationId("keycloak");
 		return WebClient.builder().filter(oauth).build();
 	}
 

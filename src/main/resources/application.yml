@@ -35,15 +35,15 @@ spring:
         registration:
           keycloak:
             client-id: geonetwork
-            client-secret: password
+            client-secret: qzkZIINTppUBNumIOHOHhb8rMbJVb88I
             authorization-grant-type: client_credentials
             #redirect-uri: "{baseUrl}/authorized/okta"
             scope: read, write
         provider:
           keycloak:
-            authorization-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/authorize
+#            authorization-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/authorize
             token-uri: https://keycloak.lfwbln.dev.linfa.services/auth/realms/geonetwork/protocol/openid-connect/token
-            
+
 # FUJI AUTH CREDENTIALS
 
 fuji.auth:
