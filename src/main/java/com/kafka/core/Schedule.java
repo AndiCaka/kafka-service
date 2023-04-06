@@ -6,7 +6,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import com.kafka.core.services.IGeoNetService;
-import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 @EnableScheduling
@@ -15,12 +14,9 @@ public class Schedule {
 	@Autowired
 	private IGeoNetService geoNetService;
 
-	@Autowired
-	WebClient geonetworkClient;
 	@Scheduled(fixedRate = 3000) // 1:01:am
-	public void geonetScheduler() {
-	geoNetService.getDoiList();
-//		geoNetService.process();
+	public void geonetScheduler() throws InterruptedException {
+		geoNetService.process();
 
 	}
 }
