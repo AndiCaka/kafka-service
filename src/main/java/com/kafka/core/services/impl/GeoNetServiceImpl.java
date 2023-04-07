@@ -1,21 +1,28 @@
 package com.kafka.core.services.impl;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kafka.common.exception.UnauthorizedException;
 import com.kafka.core.config.Event;
 import com.kafka.core.dto.FujiDTO;
 import com.kafka.core.dto.GeoNetDTO;
+import com.kafka.core.dto.KeycloakTokenDTO;
 import com.kafka.core.services.IGeoNetService;
 
 import reactor.core.publisher.Mono;
@@ -28,16 +35,30 @@ public class GeoNetServiceImpl implements IGeoNetService {
 	private final Scheduler geonetEventScheduler;
 	private final WebClient fujiClient;
 	private final WebClient geonetworkClient;
+	private final WebClient keycloakClient;
 
-	private String token = "eyJleHAiOjE2ODA3OTMyOTMsImlhdCI6MTY4MDc5Mjk5MywianRpIjoiOTE2ZDM4NjEtYzUwMC00YzhjLWE1ZDYtZDU2ZGY5N2U0ZTUxIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay5sZndibG4uZGV2LmxpbmZhLnNlcnZpY2VzL2F1dGgvcmVhbG1zL2dlb25ldHdvcmsiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiOGU5MWI4ZjMtMTc0NS00NWIyLWFkYWQtODQwOTZlY2JhNmI1IiwidHlwIjoiQmVhcmVyIiwiYXpwIjoiZ2VvbmV0d29yayIsInNlc3Npb25fc3RhdGUiOiI1ZTkwYWJlYi03YzYwLTRiZTktODM4MS03ZGU3N2E5YTA1MDIiLCJhY3IiOiIxIiwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iLCJkZWZhdWx0LXJvbGVzLWdlb25ldHdvcmsiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHByb2ZpbGUiLCJzaWQiOiI1ZTkwYWJlYi03YzYwLTRiZTktODM4MS03ZGU3N2E5YTA1MDIiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsInByZWZlcnJlZF91c2VybmFtZSI6ImthZmthLXNlcnZpY2UifQ";
+	@Value("${keycloak.auth}")
+	String grantType;
+	@Value("${keycloak.auth.client-id}")
+	String clientId;
+	@Value("${keycloak.auth.client-secret}")
+	String clientSecret;
+	@Value("${keycloak.auth.username}")
+	String username;
+	@Value("${keycloak.auth.password}")
+	String password;
+	private String token;
+
 	@Autowired
 	public GeoNetServiceImpl(StreamBridge streamBridge, Scheduler geonetEventScheduler, WebClient fujiClient,
-			WebClient geonetworkClient) {
+			WebClient geonetworkClient, WebClient keycloakClient) {
 		super();
 		this.streamBridge = streamBridge;
 		this.geonetEventScheduler = geonetEventScheduler;
 		this.fujiClient = fujiClient;
 		this.geonetworkClient = geonetworkClient;
+		this.keycloakClient = keycloakClient;
+		this.token = setToken();
 	}
 
 	@Override
@@ -76,17 +97,42 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
 	private List<GeoNetDTO> getDoiList() {
 
-		Mono<List<GeoNetDTO>> response = geonetworkClient.get()
-				.accept(MediaType.APPLICATION_JSON).headers(h -> h.setBearerAuth(token)).retrieve()
-				.bodyToMono(new ParameterizedTypeReference<List<GeoNetDTO>>() {
+		try {
+			Mono<List<GeoNetDTO>> response = geonetworkClient.get().accept(MediaType.APPLICATION_JSON)
+					.headers(h -> h.setBearerAuth(token)).retrieve()
+					.onStatus(httpStatus -> httpStatus.value() == 401,
+							error -> Mono.error(new UnauthorizedException("error Body")))
+					.bodyToMono(new ParameterizedTypeReference<List<GeoNetDTO>>() {
+					});
+
+			List<GeoNetDTO> dois = response.block();
+			if (dois != null)
+				System.err.println("!NULL");
+			else
+				System.err.println("NULL");
+			return dois.stream().collect(Collectors.toList());
+		} catch (UnauthorizedException e) {
+
+			this.token = setToken();
+			return null;
+		}
+	}
+
+	private String setToken() {
+
+		MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+		formData.add("grant_type", grantType);
+		formData.add("username", username);
+		formData.add("password", password);
+		formData.add("client_id", clientId);
+		formData.add("client_secret", clientSecret);
+
+		Mono<KeycloakTokenDTO> mono = keycloakClient.post().body(BodyInserters.fromFormData(formData)).retrieve()
+				.bodyToMono(new ParameterizedTypeReference<KeycloakTokenDTO>() {
 				});
 
-		List<GeoNetDTO> dois = response.block();
-		if (dois != null)
-			System.err.println("!NULL");
-		else
-			System.err.println("NULL");
-
-		return null;// dois.stream().collect(Collectors.toList());
+		KeycloakTokenDTO tokenDTO = mono.block();
+		return tokenDTO.getToken();
 	}
+
 }

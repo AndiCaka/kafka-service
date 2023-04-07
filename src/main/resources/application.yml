@@ -25,34 +25,22 @@ schedulers:
   geonet:
     threadPoolSize: 10
     taskQueueSize: 100
-
-# AUTHORIZATION0-SERVER CONFIGURATION (GEONETWORK)
-
-spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: geonetwork
-            client-secret: qzkZIINTppUBNumIOHOHhb8rMbJVb88I
-            authorization-grant-type: client_credentials
-            #redirect-uri: http://localhost:8080/geonetwork/*
-            scope: read, write
-        provider:
-          keycloak:
-            #authorization-uri: https://keycloak.lfwbln.dev.linfa.services/oauth2/v1/authorize
-            token-uri: https://keycloak.lfwbln.dev.linfa.services/auth/realms/geonetwork/protocol/openid-connect/token
-            
+ 
 # FUJI AUTH CREDENTIALS
-
 fuji.auth:
    username: marvel
    password: wonderwoman
 
-
+# GEONETWORK AUTH CREDENTIALS
+keycloak.auth:
+   grant_type: password
+   client_id: geonetwork
+   client_secret: qzkZIINTppUBNumIOHOHhb8rMbJVb88I
+   username: kafka-service
+   password: password
+   token-uri: https://keycloak.lfwbln.dev.linfa.services/auth/realms/geonetwork/protocol/openid-connect/token
+   
 # SERVICE URLS
-
 service:
    fuji: http://localhost:1071/fuji/api/v1/evaluate
    geonetwork: http://localhost:8080/geonetwork/records/metadatadoi/fairassesment

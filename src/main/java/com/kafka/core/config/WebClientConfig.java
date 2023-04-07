@@ -12,52 +12,23 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
+	@Value("${keycloak.auth.token-uri}")
+	String keycloakTokenUri;
 	@Value("${service.fuji}")
-	private String fujiUrl;
+	String fujiUrl;
 	@Value("${service.geonetwork}")
-	private String geonetworkUrl;
+	String geonetworkUrl;
 	@Value("${fuji.auth.username}")
-	private String username;
+	String fujiUsername;
 	@Value("${fuji.auth.password}")
-	private String password;
-	@Value("${spring.security.oauth2.client.provider.keycloak.token-uri}")
-	String tokenUri;
-	@Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
-	String clientId;
-	@Value("${spring.security.oauth2.client.registration.keycloak.client-secret}")
-	String clientSecret;
+	String fujiPassword;
 
-	/*
-	 * @Bean("cr") ReactiveClientRegistrationRepository getRegistration(
-	 * 
-	 * @Value("${spring.security.oauth2.client.provider.keycloak.token-uri}") String
-	 * tokenUri,
-	 * 
-	 * @Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
-	 * String clientId,
-	 * 
-	 * @Value(
-	 * "${spring.security.oauth2.client.registration.keycloak.client-secret}")
-	 * String clientSecret) { ClientRegistration registration =
-	 * ClientRegistration.withRegistrationId("keycloak").tokenUri(tokenUri)
-	 * .clientId(clientId).clientSecret(clientSecret)
-	 * .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS).build();
-	 * return new InMemoryReactiveClientRegistrationRepository(registration); }
-	 */
+	@Bean
+	WebClient keycloakClient() throws SSLException {
 
-	/*
-	 * @Bean WebClient geonetworkClient(ReactiveClientRegistrationRepository
-	 * clientRegistrations) throws SSLException {
-	 * ServerOAuth2AuthorizedClientExchangeFilterFunction oauth = new
-	 * ServerOAuth2AuthorizedClientExchangeFilterFunction( clientRegistrations, new
-	 * UnAuthenticatedServerOAuth2AuthorizedClientRepository());
-	 * 
-	 * oauth.setDefaultClientRegistrationId("keycloak"); return
-	 * WebClient.builder().baseUrl(geonetworkUrl)
-	 * .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-	 * .defaultHeader(HttpHeaders.ACCEPT,
-	 * MediaType.APPLICATION_JSON_VALUE).filter(oauth).build(); }
-	 */
+		return WebClient.builder().baseUrl(keycloakTokenUri)
+				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE).build();
+	}
 
 	@Bean
 	WebClient geonetworkClient() throws SSLException {
@@ -68,10 +39,10 @@ public class WebClientConfig {
 	}
 
 	@Bean
-	public WebClient fujiClient() {
+	WebClient fujiClient() {
 		return WebClient.builder().baseUrl(fujiUrl)
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
 				.defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-				.defaultHeaders(header -> header.setBasicAuth(username, password)).build();
+				.defaultHeaders(header -> header.setBasicAuth(fujiUsername, fujiPassword)).build();
 	}
 }
