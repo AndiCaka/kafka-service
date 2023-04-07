@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.apache.tomcat.util.json.JSONParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -24,6 +26,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kafka.common.exception.UnauthorizedException;
 import com.kafka.core.config.Event;
+import com.kafka.core.config.MessageProcessorConfig;
 import com.kafka.core.dto.FujiDTO;
 import com.kafka.core.dto.GeoNetDTO;
 import com.kafka.core.dto.KeycloakTokenDTO;
@@ -35,6 +38,8 @@ import reactor.core.scheduler.Scheduler;
 
 @Service
 public class GeoNetServiceImpl implements IGeoNetService {
+
+	Logger logger = LoggerFactory.getLogger(GeoNetServiceImpl.class);
 
 	private static final String TOKEN_EXPIRED = "Token expired!";
 	private final StreamBridge streamBridge;
@@ -92,6 +97,7 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
 	private List<GeoNetDTO> getDoiList() {
 
+		logger.info("Finding doi's...");
 		try {
 			Mono<List<GeoNetDTO>> response = geonetworkClient.get().accept(MediaType.APPLICATION_JSON)
 					.headers(h -> h.setBearerAuth(token)).retrieve()
@@ -102,13 +108,15 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
 			List<GeoNetDTO> dois = response.block();
 			if (dois != null) {
+				logger.info("Found doi's, size: " + dois.size());
 				return dois;
 			} else {
+				logger.info("No doi's found! Returning empty list");
 				return Collections.emptyList();
 			}
 		} catch (UnauthorizedException e) {
+			logger.error("Authorization error: " + e.getMessage());
 
-			System.err.println(e.getMessage());
 			this.token = setToken();
 			return getDoiList();
 		}
