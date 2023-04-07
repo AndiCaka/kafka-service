@@ -1,8 +1,11 @@
 package com.kafka.core.services.impl;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.tomcat.util.json.JSONParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -11,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -25,28 +29,20 @@ import com.kafka.core.dto.GeoNetDTO;
 import com.kafka.core.dto.KeycloakTokenDTO;
 import com.kafka.core.services.IGeoNetService;
 
+import net.minidev.json.JSONObject;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 @Service
 public class GeoNetServiceImpl implements IGeoNetService {
 
+	private static final String TOKEN_EXPIRED = "Token expired!";
 	private final StreamBridge streamBridge;
 	private final Scheduler geonetEventScheduler;
 	private final WebClient fujiClient;
 	private final WebClient geonetworkClient;
 	private final WebClient keycloakClient;
 
-	@Value("${keycloak.auth}")
-	String grantType;
-	@Value("${keycloak.auth.client-id}")
-	String clientId;
-	@Value("${keycloak.auth.client-secret}")
-	String clientSecret;
-	@Value("${keycloak.auth.username}")
-	String username;
-	@Value("${keycloak.auth.password}")
-	String password;
 	private String token;
 
 	@Autowired
@@ -63,8 +59,7 @@ public class GeoNetServiceImpl implements IGeoNetService {
 
 	@Override
 	public void process() {
-		// getDoiList().forEach(doi -> subscribe(doi));
-		getDoiList();
+		getDoiList().forEach(doi -> subscribe(doi));
 	}
 
 	private Mono<GeoNetDTO> subscribe(GeoNetDTO geoNetDTO) {
@@ -101,38 +96,37 @@ public class GeoNetServiceImpl implements IGeoNetService {
 			Mono<List<GeoNetDTO>> response = geonetworkClient.get().accept(MediaType.APPLICATION_JSON)
 					.headers(h -> h.setBearerAuth(token)).retrieve()
 					.onStatus(httpStatus -> httpStatus.value() == 401,
-							error -> Mono.error(new UnauthorizedException("error Body")))
+							error -> Mono.error(new UnauthorizedException(TOKEN_EXPIRED)))
 					.bodyToMono(new ParameterizedTypeReference<List<GeoNetDTO>>() {
 					});
 
 			List<GeoNetDTO> dois = response.block();
-			if (dois != null)
-				System.err.println("!NULL");
-			else
-				System.err.println("NULL");
-			return dois.stream().collect(Collectors.toList());
+			if (dois != null) {
+				return dois;
+			} else {
+				return Collections.emptyList();
+			}
 		} catch (UnauthorizedException e) {
 
+			System.err.println(e.getMessage());
 			this.token = setToken();
-			return null;
+			return getDoiList();
 		}
 	}
 
 	private String setToken() {
 
 		MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-		formData.add("grant_type", grantType);
-		formData.add("username", username);
-		formData.add("password", password);
-		formData.add("client_id", clientId);
-		formData.add("client_secret", clientSecret);
+		formData.add("grant_type", "password");
+		formData.add("username", "kafka-service");
+		formData.add("password", "password");
+		formData.add("client_id", "geonetwork");
+		formData.add("client_secret", "qzkZIINTppUBNumIOHOHhb8rMbJVb88I");
 
-		Mono<KeycloakTokenDTO> mono = keycloakClient.post().body(BodyInserters.fromFormData(formData)).retrieve()
-				.bodyToMono(new ParameterizedTypeReference<KeycloakTokenDTO>() {
-				});
+		JSONObject response = keycloakClient.post().contentType(MediaType.APPLICATION_FORM_URLENCODED)
+				.body(BodyInserters.fromFormData(formData)).exchange().block().bodyToMono(JSONObject.class).block();
 
-		KeycloakTokenDTO tokenDTO = mono.block();
-		return tokenDTO.getToken();
+		return response.getAsString("access_token");
 	}
 
 }

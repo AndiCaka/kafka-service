@@ -14,7 +14,7 @@ public class MessageProcessorConfig {
 		return event -> {
 			String assessment = event.assess().apply(event.getGeoNetModel().getDoiURL());
 			System.err.println(assessment);
-			//event.updateDOI().accept(event.getGeoNetModel().getId(), assessment);
+			event.updateDOI().accept(event.getGeoNetModel().getId(), assessment);
 		};
 	}
 }
